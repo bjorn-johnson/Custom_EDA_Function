@@ -1,0 +1,119 @@
+---
+title: "Custom Exploratory Data Analysis"
+author: "Bjorn Johnson"
+date: "5/27/2020"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+#knit to Word document to share EDA
+
+#Packages
+```{r,warning=FALSE,message=FALSE}
+
+library(tidyverse)
+library(data.table)
+library(readxl)
+library(sqldf)
+library(broom)
+library(gplots)
+library(ggpubr)
+library(car)
+library(corrplot)
+library(dlookr)
+
+```
+
+#EDA Function
+```{r,warning=FALSE,message=FALSE}
+
+Custom_EDA <- function(df) {
+  #output record count
+  cat('The number of records in the table is: ', nrow(df))
+  
+  #gather numeric variables
+  numeric_vars <- select_if(df, is.numeric)
+  
+  #filtering character columns with less than 10 unique values
+  factor_vars <- df %>%
+    mutate_if(is.character, factor) %>%
+    select_if( ~ is.factor(.) & (nlevels(.) < 10))
+  
+  #create vector of correlations
+  df_correlation <- cor(numeric_vars, use = "complete.obs")
+  
+  #visualize correlation vector
+  corrplot(
+    df_correlation,
+    method = "number",
+    order = "AOE",
+    tl.cex = .8,
+    tl.col = "black",
+    title = "Numeric Column Correlations",
+    mar = c(0, 0, 3, 0)
+  )
+  
+  #checking distributions of numeric columns. alter code to mimic bar-chart for loop if too many numeric columns
+  result1 <- ggplot(gather(numeric_vars), aes(value)) +
+    geom_histogram() +
+    facet_wrap( ~ key, scales = "free") +
+    labs(title = "Numeric Variable Distributions") +
+    theme(plot.title = element_text(
+      face = "bold.italic",
+      size = 14,
+      hjust = 0.5
+    ))
+  
+  #checking counts of categorical columns using bar charts
+  for (i in factor_vars) {
+    p = ggplot(factor_vars, aes(i)) +
+      geom_bar(stat = "count") +
+      coord_flip() +
+      labs(title = paste0(
+        "Categorical Variable Value Counts: ",
+        colnames(factor_vars)[i]
+      )) +
+      theme(plot.title = element_text(
+        face = "bold.italic",
+        size = 12,
+        hjust = 0.5
+      ))
+    plot(p)
+  }
+  
+  plot(result1)
+  
+  #create normality checks and log/sqroot transformations on numeric columns
+  plot_normality(numeric_vars)
+}
+
+```
+
+#Run EDA Function
+```{r,warning=FALSE,message=FALSE}
+
+#run on default diamonds dataset. Change to your own dataset if desired.
+Custom_EDA(diamonds)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
